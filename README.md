@@ -16,9 +16,9 @@ Follow these steps to set up and work on your project:
 
 ### Task 2: Minimum Viable Product
 
-[] Write and implement four custom `middleware` functions, detailed below.
-[] Build an API to let clients perform CRUD operations on `users`.
-[] Add endpoints to retrieve the list of `posts` for a `user` and to store a new `post` for a `user`.
+[X] Write and implement four custom `middleware` functions, detailed below.
+[X] Build an API to let clients perform CRUD operations on `users`.
+[X] Add endpoints to retrieve the list of `posts` for a `user` and to store a new `post` for a `user`.
 
 #### Custom Middleware Requirements
 

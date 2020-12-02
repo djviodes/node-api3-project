@@ -1,150 +1,168 @@
-const express = require('express');
-
-const Hubs = require('./userDb');
-const Posts = require('../posts/postDb');
+const express = require("express");
+const { update } = require("../data/dbConfig");
+const Hubs = require("./userDb");
+const Posts = require("../posts/postDb");
 
 const router = express.Router();
 
-//custom middleware
-
 function validateUserId(req, res, next) {
   const { id } = req.params;
+
   Hubs.getById(id)
-    .then(data => {
+    .then((data) => {
+      console.log(data);
       if (data) {
-        req.hub = data
-        next()
+        req.hub = data;
+        next();
       } else {
-        next({ code: 400, message: 'invalid user id' })
+        res.status(404).json({ message: `ID ${id} does not exist at all` });
+        console.log({ message: `ID ${id} does not exist at all` });
       }
     })
-    .catch(err => {
-      next({ code: 500, message: err })
-    })
+    .catch((error) => {
+      console.log(error.message, error.stack);
+      res.status(500).json({
+        message: error.message,
+        stack: error.stack,
+      });
+    });
 }
 
 function validateUser(req, res, next) {
-  if(req.body === {}) {
-    next({ code: 400, message: 'missing user data' })
+  console.log(req.body);
+  if (req.body === {}) {
+    res.status(400).json({ message: "missing user data" });
   } else if (!req.body.name) {
-    next({ code: 400, message: 'missing required name field' })
+    res.status(400).json({ message: "missing required name field" });
   } else {
-    next()
+    next();
   }
 }
 
 function validatePost(req, res, next) {
-  if(req.body === {}) {
-    next({ code: 400, message: 'missing post data' })
+  console.log(req.body);
+  if (req.body === {}) {
+    res.status(400).json({ message: "missing post data" });
   } else if (!req.body.text) {
-    next({ code: 400, message: 'missing required text field' })
+    res.status(400).json({ message: "missing required post field" });
   } else {
-    next()
+    next();
   }
 }
 
-router.post('/', validateUser, (req, res) => {
+router.post("/", [validateUser], (req, res) => {
   Hubs.insert(req.body)
-    .then(data => {
-      const newUser = { ...data, ...req.body }
-      console.log(newUser)
-      res.status(201).json(req.body)
+    .then((hub) => {
+      const newUser = { ...hub, ...req.body };
+      console.log(newUser);
+      res.status(201).json(req.body);
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
 });
 
-router.post('/:id/posts', validatePost, (req, res) => {
+router.post("/:id/posts", [validatePost], (req, res) => {
   Posts.insert(req.body)
-    .then(data => {
-      res.status(201).json(data)
+    .then((hubs) => {
+      console.log(hubs);
+      res.status(201).json(hubs);
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
 });
 
-router.get('/', (req, res) => {
+router.get("/", (req, res) => {
   Hubs.get(req.query)
-    .then(data => {
-      res.status(200).json(data)
+    .then((hubs) => {
+      res.status(200).json(hubs);
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
 });
 
-router.get('/:id', validateUserId, (req, res) => {
-  res.status(200).json(req.hub)
+router.get("/:id", [validateUserId], (req, res) => {
+  res.status(200).json(req.hub);
 });
 
-router.get('/:id/posts', (req, res) => {
+router.get("/:id/posts", (req, res) => {
   Hubs.getUserPosts(req.params.id)
-    .then(data => {
-      if (!data.length) {
+    .then((hubs) => {
+      console.log(hubs);
+      if (!hubs.length) {
         res.status(404).json({
-          message: 'Post not found'
+          message: `the user with ID ${req.params.id} does not exist`,
         });
       } else {
-        res.status(200).json(data);
+        res.status(200).json(hubs);
       }
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete("/:id", (req, res) => {
   Hubs.remove(req.params.id)
-    .then(count => {
+    .then((count) => {
       if (count > 0) {
-        res.status(200).json({
-          message: `User ${req.params.id} has been successfully deleted`
-        });
+        res
+          .status(200)
+          .json({ message: `user ${req.params.id} has been deleted` });
       } else {
-        res.status(404).json({
-          message: 'User not found'
-        });
+        res
+          .status(404)
+          .json({ message: `user with ID ${req.params.id} cannot be found` });
       }
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
 });
 
-router.put('/:id', (req, res) => {
+router.put("/:id", (req, res) => {
   const changes = req.body;
+
   Hubs.update(req.params.id, changes)
-    .then(data => {
-      if (data) {
-        const updateUser = { id: req.params.id, ...changes }
-        res.status(200).json(updateUser);
+    .then((hub) => {
+      if (hub) {
+        const changeUser = { id: req.params.id, ...changes };
+        res.status(200).json(changeUser);
       } else {
         res.status(400).json({
-          message: 'You must have goofed something up. Mickey does NOT approve...'
+          message: `the user with ID ${req.params.id} does not exist`,
         });
       }
     })
-    .catch(err => {
+    .catch((error) => {
+      console.log(error.message, error.stack);
       res.status(500).json({
-        message: err.message
+        message: error.message,
+        stack: error.stack,
       });
     });
-});
-
-router.use((err, req, res, next) => {
-  res.status(err.code).json({ message: err.message });
 });
 
 module.exports = router;
